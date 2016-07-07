@@ -12,8 +12,114 @@ import org.jsoup.select.Elements;
 
 public class WikiPhilosophy {
 	
-	final static WikiFetcher wf = new WikiFetcher();
+	private static class WikiChecker {
+		private Elements paragraphs;
+
+		public WikiChecker(Elements paragraphs) {
+			this.paragraphs = paragraphs;
+		}
+
+		public Element findFirstLink() {
+			// iterate through all paragraphs
+			for (Element paragraph: paragraphs) {
+				Element firstLink = findFirstLinkParagraph(paragraph);
+				if (firstLink != null) {
+					return firstLink;
+				}
+			}
+			return null;
+		}
+
+		private Element findFirstLinkParagraph(Node root) {
+			// creates tree of nodes 
+			Iterable<Node> tree = new WikiNodeIterable(root);
+			for (Node node: tree) {
+				// not in parens???
+				if (node instanceof TextNode) {
+					if (isNotInParens((TextNode) node)) {
+						continue;
+					}
+				}
+				// not in italics??
+				if (node instanceof Element) {
+					if (isValid((Element)node)) {
+						return (Element) node;
+					}
+				}
+			}
+			return null;
+		}
+
+
+		private boolean isValid (Element e) {
+			if (isNotItalics(e)) {
+				return true;
+			}
+			return false;
+		}
+
+		private boolean isNotItalics (Element e) {
+			Elements parents = e.parents();
+			for (Element element: parents) {
+				if (element.tagName().equals("i") || element.tagName().equals("em")) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		private boolean isNotInParens(TextNode e) {
+			int parensCounter = 0;
+			String text = e.text();
+			for (char c: text.toCharArray()) {
+				if (c == '(') {
+					parensCounter++;
+				} else if (c == ')') {
+					parensCounter--;
+				}
+			}
+			if (parensCounter == 0) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+	}
+
+	final static WikiFetcher fetcher = new WikiFetcher();
+
 	
+	private static boolean wikiFinder(String beg, String end, int maxTries) throws IOException {
+		List<String> visited = new ArrayList<String>();
+
+		String url = beg;
+		for(int i = 0; i < maxTries; i++) {
+			Elements paragraphs = fetcher.fetchWikipedia(url); //gets paragraphs
+			WikiChecker checker = new WikiChecker(paragraphs); //creates wikiChecker that can check paragraphs (Elements type)
+			Element e = checker.findFirstLink(); //finding next link
+
+			if (visited.contains(url)) {
+				System.out.println("loop");
+				return false;
+			}
+
+			visited.add(url); // adds current URL to list
+
+			if (e == null) {
+				System.out.println("dead end");
+				return false;
+			}
+			if (url == end) {
+				System.out.println("made it");
+				return true;
+			}
+			url = e.attr("abs:href");
+		}
+		System.out.println("exceeded maximum tries");
+		return false;
+	}
+
 	/**
 	 * Tests a conjecture about Wikipedia and Philosophy.
 	 * 
@@ -32,20 +138,10 @@ public class WikiPhilosophy {
         // some example code to get you started
 
 		String url = "https://en.wikipedia.org/wiki/Java_(programming_language)";
-		Elements paragraphs = wf.fetchWikipedia(url);
+		String goal = "https://en.wikipedia.org/wiki/Philosophy";
 
-		Element firstPara = paragraphs.get(0);
-		
-		Iterable<Node> iter = new WikiNodeIterable(firstPara);
-		for (Node node: iter) {
-			if (node instanceof TextNode) {
-				System.out.print(node);
-			}
-        }
-
-        // the following throws an exception so the test fails
-        // until you update the code
-        String msg = "Complete this lab by adding your code and removing this statement.";
-        throw new UnsupportedOperationException(msg);
+		if (wikiFinder(url, goal, 7)) {
+			System.out.println("we did it reddit");
+		}
 	}
 }
