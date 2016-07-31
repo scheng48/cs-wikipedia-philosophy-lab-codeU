@@ -36,26 +36,27 @@ public class WikiPhilosophy {
 			for (Node node: tree) {
 				// not in parens???
 				if (node instanceof TextNode) {
-					if (isNotInParens((TextNode) node)) {
+					if(!isNotInParens((TextNode) node)) {
 						continue;
 					}
 				}
 				// not in italics??
 				if (node instanceof Element) {
-					if (isValid((Element)node)) {
-						return (Element) node;
+					Element link = italicsAndLinkCheck((Element) node);
+					if(link != null) {
+						return link;
 					}
 				}
 			}
 			return null;
 		}
 
-
-		private boolean isValid (Element e) {
-			if (isNotItalics(e)) {
-				return true;
+		private Element italicsAndLinkCheck (Element e) {
+			if (isNotItalics(e) && e.tagName().equals("a")) {
+				return e;
+			} else {
+				return null;
 			}
-			return false;
 		}
 
 		private boolean isNotItalics (Element e) {
@@ -68,13 +69,15 @@ public class WikiPhilosophy {
 			return true;
 		}
 
-		private boolean isNotInParens(TextNode e) {
+		private boolean isNotInParens(TextNode n) {
 			int parensCounter = 0;
-			String text = e.text();
+			String text = n.text();
+			System.out.println(text);
 			for (char c: text.toCharArray()) {
 				if (c == '(') {
 					parensCounter++;
-				} else if (c == ')') {
+				}
+				if (c == ')') {
 					parensCounter--;
 				}
 			}
@@ -99,6 +102,9 @@ public class WikiPhilosophy {
 			WikiChecker checker = new WikiChecker(paragraphs); //creates wikiChecker that can check paragraphs (Elements type)
 			Element e = checker.findFirstLink(); //finding next link
 
+			System.out.println(i);
+			System.out.println(url);
+
 			if (visited.contains(url)) {
 				System.out.println("loop");
 				return false;
@@ -110,7 +116,7 @@ public class WikiPhilosophy {
 				System.out.println("dead end");
 				return false;
 			}
-			if (url == end) {
+			if (url.equals(end)) {
 				System.out.println("made it");
 				return true;
 			}
@@ -137,10 +143,17 @@ public class WikiPhilosophy {
 		
         // some example code to get you started
 
-		String url = "https://en.wikipedia.org/wiki/Java_(programming_language)";
+		String start = "https://en.wikipedia.org/wiki/Java_(programming_language)";
 		String goal = "https://en.wikipedia.org/wiki/Philosophy";
 
-		if (wikiFinder(url, goal, 7)) {
+		WikiFetcher wf = new WikiFetcher();
+		Elements paragraphs = wf.fetchWikipedia(start);
+		WikiChecker checker = new WikiChecker(paragraphs);
+		Element e = checker.findFirstLink();
+		System.out.println(e.attr("abs:href"));
+		System.out.println(e.text());
+
+		if (wikiFinder(start, goal, 7)) {
 			System.out.println("we did it reddit");
 		}
 	}
